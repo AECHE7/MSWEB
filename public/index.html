@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLSU Maestro Singers Concert Ticket Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas CDN for saving as image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti CDN for party popper animation -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            /* Light, soft background */
+            background: linear-gradient(to bottom, #f0f4f8, #e6eef6); /* Very light blue-gray gradient */
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* Added for vertical centering */
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333333; /* Default dark text color for body */
+        }
+
+        /* Specific styles for the General Admission ticket theme (retained sleek/glossy) */
+        .general-admission-theme {
+            background: linear-gradient(to bottom right, #e0a72b, #b86200, #8A0000); /* Deeper reds */
+            color: #ffffff; /* White text for contrast */
+        }
+        /* Specific styles for the VIP ticket theme (retained sleek/glossy) */
+        .vip-theme {
+            /* More golden gradient */
+            background: linear-gradient(to bottom right, #FFD700, #FFC107, #CC8800, #A87900);
+            color: #4b5563; /* Darker text for contrast */
+        }
+        /* Specific styles for the Relatives ticket theme (retained sleek/glossy) */
+        .relatives-theme {
+            /* More crystallized and emerald gradient */
+            background: linear-gradient(to bottom right, #80ED99, #3CB371, #2E8B57, #20B2AA);
+            color: #ffffff; /* White text for contrast */
+        }
+
+        /* Main ticket card container - narrower and taller */
+        .ticket-card {
+            width: 400px; /* Fixed width to match sample (w-64) */
+            max-width: 90%; /* Ensure it's responsive on smaller screens */
+            height: auto; /* Height adjusts to content */
+            margin-bottom: 20px; /* Space between front and back on screen */
+            border-radius: 1.5rem; /* More rounded corners */
+            overflow: hidden;
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.1); /* Softer shadow */
+            transition: transform 0.3s ease-in-out; /* Smooth transition for hover effects */
+        }
+
+        /* Hide print/save buttons when printing */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #fff; /* White background for print */
+                margin: 0;
+                padding: 0;
+                display: block; /* Allow content to flow naturally */
+                min-height: auto;
+            }
+            .ticket-card {
+                box-shadow: none; /* Remove shadow for print */
+                border: 1px solid #ccc; /* Add a subtle border for print */
+                margin: 5mm auto; /* Center ticket on print page with some margin */
+                width: 500px; /* Exact width for print */
+                max-width: 100%; /* Ensure it doesn't overflow */
+                padding: 1.5rem; /* Reverted to default p-6 (1.5rem) */
+                page-break-after: always; /* Force a page break after each ticket side */
+            }
+            .ticket-card:last-of-type {
+                page-break-after: auto; /* No page break after the very last ticket side */
+            }
+            .ticket-container .border-b, .ticket-container .border-t {
+                border-width: 1px; /* Thinner borders for print */
+            }
+        }
+
+        /* Modal specific styles */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5); /* Lighter backdrop */
+        }
+        .carousel-slide {
+            display: none; /* Hidden by default */
+            animation: fadeIn 0.5s ease-out; /* Fade in animation */
+        }
+        .carousel-slide.active {
+            display: block; /* Show active slide */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Input with icon styling - removed padding-left from here */
+        .input-with-icon {
+            position: relative;
+        }
+        /* Removed .input-with-icon input { padding-left: 2.5rem; } */
+        .input-with-icon .icon {
+            /* This rule is now effectively unused as icons are removed from HTML */
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="ticketPortalSection" class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-8 border border-gray-200">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-2">
+            CLSU Maestro Singers
+        </h1>
+        <h2 class="text-xl md:text-2xl font-semibold text-center text-yellow-600 mb-6">
+            "Intayon" Send-off Concert Ticket Portal
+        </h2>
+
+        <!-- Category Selection Section (moved up) -->
+        <div class="mb-8 p-4 sm:p-6 bg-blue-50 rounded-lg shadow-inner border border-blue-200 text-gray-800">
+            <p class="text-center font-medium text-lg mb-4 text-gray-700">
+                First, select your ticket category:
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+                <button
+                    onclick="selectCategory('ga')"
+                    class="ticket-category-button flex-1 min-w-[120px] max-w-[180px] bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 border border-gray-300"
+                >
+                    General Admission
+                </button>
+                <button
+                    onclick="selectCategory('vip')"
+                    class="ticket-category-button flex-1 min-w-[120px] max-w-[180px] bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 border border-gray-300"
+                >
+                    VIP / Officials
+                </button>
+                <button
+                    onclick="selectCategory('relatives')"
+                    class="ticket-category-button flex-1 min-w-[120px] max-w-[180px] bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 border border-gray-300"
+                >
+                    Relatives
+                </button>
+            </div>
+        </div>
+
+        <!-- Attendee Details Section (moved after category) -->
+        <div class="mb-8 p-4 sm:p-6 bg-blue-50 rounded-lg shadow-inner border border-blue-200 text-gray-800">
+            <p class="text-center font-medium text-lg mb-4 text-gray-700">
+                Then, enter your details:
+            </p>
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <div class="w-full">
+                    <label for="attendeeName" class="block text-sm font-medium text-gray-700 mb-1">Your Name:</label>
+                    <input
+                        type="text"
+                        id="attendeeName"
+                        placeholder="e.g., Juan Dela Cruz"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-900 placeholder-gray-400"
+                        oninput="checkInputsAndEnableButton()"
+                    />
+                </div>
+                <div class="w-full">
+                    <label for="seatNumber" class="block text-sm font-medium text-gray-700 mb-1">Your Seat Number:</label>
+                    <input
+                        type="text"
+                        id="seatNumber"
+                        placeholder="e.g., GA-123 (emailed to you)"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-900 placeholder-gray-400"
+                        oninput="checkInputsAndEnableButton()"
+                    />
+                </div>
+            </div>
+
+            <!-- New Generate Button -->
+            <div class="text-center">
+                <button id="generateTicketBtn" onclick="generateTicket()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 opacity-50 cursor-not-allowed" disabled>
+                    <i class="fas fa-ticket-alt mr-2"></i> Generate My Pass
+                </button>
+            </div>
+        </div>
+
+        <div id="ticketDisplayArea" class="flex flex-col items-center">
+            <p id="initialPrompt" class="text-gray-600 text-center mt-8">Select a ticket category and enter your details to generate your pass.</p>
+        </div>
+    </div>
+
+    <!-- Home Section -->
+    <div id="homeSection" class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-8 border border-gray-200 hidden">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Welcome to the CLSU Maestro Singers Portal!</h2>
+        <p class="text-gray-700 mb-4">
+            We are thrilled to invite you to the "Intayon" Send-off Concert, a musical journey featuring the Central Luzon State University Maestro Singers. This concert is a heartfelt farewell as we prepare for our international choral festival participations.
+        </p>
+        <p class="text-700 mb-6">
+            Explore our portal to get your personalized concert pass and join us for an evening of enchanting melodies and harmonious voices. Admission is free, but seats are limited, so reserve your spot today!
+        </p>
+        <div class="text-center">
+            <button onclick="showPage('ticketPortalSection')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                <i class="fas fa-ticket-alt mr-2"></i> Get Your Pass Now!
+            </button>
+        </div>
+    </div>
+
+    <!-- About Section -->
+    <div id="aboutSection" class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-8 border border-gray-200 hidden">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">About CLSU Maestro Singers</h2>
+        <p class="text-gray-700 mb-4">
+            The CLSU Maestro Singers is the official choral group of Central Luzon State University, renowned for its diverse repertoire and captivating performances. Composed of talented students from various disciplines, the group has consistently showcased excellence in choral music, both locally and internationally.
+        </p>
+        <p class="text-gray-700 mb-6">
+            Under the guidance of their esteemed conductor, the Maestro Singers are dedicated to promoting Filipino culture through music and fostering a deep appreciation for choral artistry. Their "Intayon" Send-off Concert marks a significant milestone as they embark on a new international journey.
+        </p>
+        <div class="text-center">
+            <img src="https://placehold.co/300x180/E0E7FF/4F46E5?text=Maestro+Group" alt="CLSU Maestro Singers Group" class="mx-auto rounded-lg shadow-md mb-4">
+            <p class="text-sm text-gray-600">The CLSU Maestro Singers performing.</p>
+        </div>
+    </div>
+
+    <!-- Contact Section -->
+    <div id="contactSection" class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-8 border border-gray-200 hidden">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">Contact Us</h2>
+        <p class="text-gray-700 mb-4 text-center">
+            Have questions or need assistance? Feel free to reach out to us!
+        </p>
+        <div class="space-y-4 text-center max-w-sm mx-auto">
+            <p class="text-gray-700"><i class="fas fa-phone-alt mr-2 text-blue-500"></i> Phone: +63 917 428 8758</p>
+            <p class="text-gray-700"><i class="fas fa-envelope mr-2 text-blue-500"></i> Email: info@clsumaestrosingers.com</p>
+            <p class="text-700"><i class="fas fa-map-marker-alt mr-2 text-blue-500"></i> Address: Central Luzon State University, Science City of Muñoz, Nueva Ecija, Philippines</p>
+            <p class="text-gray-700"><i class="fab fa-facebook-f mr-2 text-blue-500"></i> Facebook: <a href="https://facebook.com/clsumaestrosingers" target="_blank" class="text-blue-600 hover:underline">clsumaestrosingers</a></p>
+        </div>
+        <div class="mt-6 text-center">
+            <button onclick="showPage('ticketPortalSection')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                <i class="fas fa-ticket-alt mr-2"></i> Get Your Pass
+            </button>
+        </div>
+    </div>
+
+    <!-- Welcome Modal (Carousel) -->
+    <div id="welcomeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white text-gray-800 p-8 rounded-lg shadow-xl max-w-md w-full relative transform transition-all duration-300 scale-95 opacity-0 border border-blue-300" id="modalContent">
+            <button
+                onclick="closeModal()"
+                class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl font-bold leading-none"
+                aria-label="Close"
+            >
+                &times;
+            </button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">
+                Welcome to the CLSU Maestro Singers Ticket Portal!
+            </h3>
+
+            <!-- Carousel Slides Container -->
+            <div id="carouselSlides" class="relative overflow-hidden mb-6">
+                <!-- Slide 1: Intro -->
+                <div class="carousel-slide text-center">
+                    <p class="text-gray-700 mb-4">
+                        <i class="fas fa-hand-sparkles text-blue-500 text-3xl mb-2"></i><br>
+                        Get your personalized concert pass in a few simple steps.
+                    </p>
+                    <img src="https://placehold.co/200x120/E0E7FF/4F46E5?text=Ticket+App" alt="Welcome Image" class="mx-auto mb-4 rounded-lg shadow-sm border border-blue-300">
+                    <p class="text-sm text-gray-600">
+                        This portal allows you to generate and save your unique pass for the "Intayon" Send-off Concert.
+                    </p>
+                </div>
+
+                <!-- Slide 2: Step 1 - Choose Category -->
+                <div class="carousel-slide text-center">
+                    <h4 class="text-xl font-semibold text-blue-600 mb-3"><i class="fas fa-ticket-alt mr-2"></i>Step 1: Choose Your Ticket Category</h4>
+                    <p class="text-gray-700 mb-4">
+                        Start by selecting one of the ticket categories (General Admission, VIP, or Relatives) to define your pass type.
+                    </p>
+                    <img src="https://placehold.co/200x120/FFEDD5/9A3412?text=Choose+Category" alt="Choose Category Image" class="mx-auto mb-4 rounded-lg shadow-sm border border-blue-300">
+                    <p class="text-sm text-gray-600">
+                        Each category has a distinct look!
+                    </p>
+                </div>
+
+                <!-- Slide 3: Step 2 - Enter Details -->
+                <div class="carousel-slide text-center">
+                    <h4 class="text-xl font-semibold text-blue-600 mb-3"><i class="fas fa-pen-to-square mr-2"></i>Step 2: Enter Your Details</h4>
+                    <p class="text-gray-700 mb-4">
+                        After selecting a category, enter your full name and the seat number <span class="font-bold">emailed to you</span> in the fields provided.
+                    </p>
+                    <img src="https://placehold.co/200x120/D1FAE5/065F46?text=Enter+Details" alt="Enter Details Image" class="mx-auto mb-4 rounded-lg shadow-sm border border-blue-300">
+                    <p class="text-sm text-gray-600">
+                        Your details will appear directly on your digital ticket.
+                    </p>
+                </div>
+
+                <!-- Slide 4: Step 3 - Save & Present -->
+                <div class="carousel-slide text-center">
+                    <h4 class="text-xl font-semibold text-blue-600 mb-3"><i class="fas fa-download mr-2"></i>Step 3: Generate & Save</h4>
+                    <p class="text-gray-700 mb-4">
+                        Once your details are entered, click "Generate My Pass" and then "Save as Image" to download your ticket. You can then <span class="font-bold">present or email this digital pass</span> for verification.
+                    </p>
+                    <img src="https://placehold.co/200x120/FEE2E2/991B1B?text=Save+Ticket" alt="Save Ticket Image" class="mx-auto mb-4 rounded-lg shadow-sm border border-blue-300">
+                    <p class="text-sm text-gray-600">
+                        Admission is free, but seats are limited. Enjoy the concert!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Carousel Navigation & Pagination -->
+            <div class="flex justify-between items-center mb-6">
+                <button id="prevSlide" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full transition duration-200" disabled>
+                    Previous
+                </button>
+                <div id="paginationDots" class="flex space-x-2">
+                    <!-- Dots will be generated by JS -->
+                </div>
+                <button id="nextSlide" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full transition duration-200">
+                    Next
+                </button>
+            </div>
+
+            <button
+                onclick="closeModal()"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+            >
+                Got It! Let's Go!
+            </button>
+        </div>
+    </div>
+
+    <!-- Thank You Modal -->
+    <div id="thankYouModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center border border-green-300 transform transition-all duration-300 scale-95 opacity-0" id="thankYouModalContent">
+            <h4 class="text-2xl font-bold text-gray-800 mb-4">Ticket Saved!</h4>
+            <p class="text-gray-700 mb-6">
+                Thank you for reserving your pass! We look forward to seeing you at the concert on July 18, 2025!
+            </p>
+            <button onclick="closeThankYouModal()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentTicketType = null; // Stores the currently selected ticket type
+        const generateTicketBtn = document.getElementById('generateTicketBtn');
+        const initialPrompt = document.getElementById('initialPrompt');
+        const attendeeNameInput = document.getElementById('attendeeName');
+        const seatNumberInput = document.getElementById('seatNumber');
+
+        // Modal and Carousel functions
+        const welcomeModal = document.getElementById('welcomeModal');
+        const modalContent = document.getElementById('modalContent');
+        const carouselSlides = document.querySelectorAll('.carousel-slide');
+        const paginationDotsContainer = document.getElementById('paginationDots');
+        const prevSlideBtn = document.getElementById('prevSlide');
+        const nextSlideBtn = document.getElementById('nextSlide');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            carouselSlides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                }
+            });
+            updatePaginationDots();
+            updateNavigationButtons();
+        }
+
+        function nextSlide() {
+            if (currentSlide < carouselSlides.length - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            } else {
+                closeModal(); // Close modal if on last slide and 'Next' is clicked
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        function updatePaginationDots() {
+            paginationDotsContainer.innerHTML = ''; // Clear existing dots
+            carouselSlides.forEach((_, i) => {
+                const dot = document.createElement('span');
+                dot.classList.add('w-3', 'h-3', 'rounded-full', 'bg-gray-400', 'cursor-pointer', 'transition-colors', 'duration-200');
+                if (i === currentSlide) {
+                    dot.classList.remove('bg-gray-400');
+                    dot.classList.add('bg-blue-600'); /* Active dot color for light theme */
+                }
+                dot.onclick = () => {
+                    currentSlide = i;
+                    showSlide(currentSlide);
+                };
+                paginationDotsContainer.appendChild(dot);
+            });
+        }
+
+        function updateNavigationButtons() {
+            prevSlideBtn.disabled = currentSlide === 0;
+            nextSlideBtn.textContent = currentSlide === carouselSlides.length - 1 ? "Finish" : "Next";
+            
+            // Change button colors based on state
+            if (currentSlide === carouselSlides.length - 1) {
+                nextSlideBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                nextSlideBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            } else {
+                nextSlideBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                nextSlideBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }
+
+            // Prev button styling
+            if (prevSlideBtn.disabled) {
+                prevSlideBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+                prevSlideBtn.classList.add('bg-gray-300', 'text-gray-600', 'cursor-not-allowed');
+            } else {
+                prevSlideBtn.classList.remove('bg-gray-300', 'text-gray-600', 'cursor-not-allowed');
+                prevSlideBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+            }
+        }
+
+        function showModal() {
+            welcomeModal.classList.remove('hidden');
+            // Animate modal content in
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+                showSlide(currentSlide); // Show the first slide
+            }, 10);
+        }
+
+        function closeModal() {
+            // Animate modal content out
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                welcomeModal.classList.add('hidden');
+                currentSlide = 0; // Reset to first slide for next time
+            }, 300);
+        }
+
+        // Event listeners for carousel navigation
+        prevSlideBtn.addEventListener('click', prevSlide);
+        nextSlideBtn.addEventListener('click', nextSlide);
+
+        // Show modal on page load
+        document.addEventListener('DOMContentLoaded', showModal);
+
+
+        // Function to control which main content section is visible
+        function showPage(pageId) {
+            // Hide all main content sections
+            document.getElementById('ticketPortalSection').classList.add('hidden');
+            document.getElementById('homeSection').classList.add('hidden');
+            document.getElementById('aboutSection').classList.add('hidden');
+            document.getElementById('contactSection').classList.add('hidden');
+
+            // Show the requested section
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        // Set initial page view to ticket portal
+        document.addEventListener('DOMContentLoaded', () => {
+            showPage('ticketPortalSection'); // Show the ticket portal by default
+            showModal(); // Then show the welcome modal on top
+        });
+
+
+        function selectCategory(type) {
+            currentTicketType = type;
+            // Remove active state from all buttons
+            document.querySelectorAll('.ticket-category-button').forEach(button => {
+                button.classList.remove('ring-4', 'ring-blue-500', 'ring-opacity-50');
+            });
+
+            // Add active state to the clicked button
+            const clickedButton = document.querySelector(`button[onclick="selectCategory('${type}')"]`);
+            if (clickedButton) {
+                clickedButton.classList.add('ring-4', 'ring-blue-500', 'ring-opacity-50');
+            }
+
+            // Check inputs to enable/disable generate button
+            checkInputsAndEnableButton();
+            initialPrompt.textContent = 'Now, enter your details and click "Generate My Pass".';
+            ticketDisplayArea.innerHTML = ''; // Clear any previously rendered ticket
+        }
+
+        function checkInputsAndEnableButton() {
+            const attendeeName = attendeeNameInput.value.trim();
+            const seatNumber = seatNumberInput.value.trim();
+
+            if (currentTicketType && attendeeName && seatNumber) {
+                generateTicketBtn.disabled = false;
+                generateTicketBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                generateTicketBtn.disabled = true;
+                generateTicketBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function generateTicket() {
+            if (!currentTicketType) {
+                showCustomAlert('Please select a ticket category first!');
+                return;
+            }
+            const attendeeName = attendeeNameInput.value.trim();
+            const seatNumber = seatNumberInput.value.trim();
+
+            if (!attendeeName || !seatNumber) {
+                showCustomAlert('Please enter both your name and seat number!');
+                return;
+            }
+
+            // New validation logic for seat number based on category
+            const seatPrefix = seatNumber.charAt(0).toUpperCase();
+            let expectedPrefix = '';
+
+            switch (currentTicketType) {
+                case 'vip':
+                    expectedPrefix = 'V';
+                    break;
+                case 'ga':
+                    expectedPrefix = 'G';
+                    break;
+                case 'relatives':
+                    expectedPrefix = 'R';
+                    break;
+            }
+
+            if (seatPrefix !== expectedPrefix) {
+                showCustomAlert(`Incorect seat. Try again.`);
+                return;
+            }
+
+            // Now call the renderTicketContent function with the selected type and current input values
+            renderTicketContent(currentTicketType, attendeeName, seatNumber);
+        }
+
+        function updateTicketPreview() {
+            // This function is now primarily for live updates on the generated ticket if it exists
+            if (currentTicketType && document.getElementById('renderedAttendeeName')) {
+                const renderedAttendeeNameInput = document.getElementById('renderedAttendeeName');
+                const renderedSeatNumberInput = document.getElementById('renderedSeatNumber');
+
+                renderedAttendeeNameInput.value = attendeeNameInput.value || 'ATTENDEE NAME';
+                renderedSeatNumberInput.value = seatNumberInput.value || 'SEAT NUMBER';
+            }
+            // Also call checkInputsAndEnableButton to ensure button state is correct on input
+            checkInputsAndEnableButton();
+        }
+
+        // Renaming the original renderTicket to renderTicketContent to avoid confusion
+        function renderTicketContent(type, attendeeName, seatNumber) {
+            const ticketDisplayArea = document.getElementById('ticketDisplayArea');
+            initialPrompt.classList.add('hidden'); // Hide the prompt once ticket is generated
+
+            let themeClass = '';
+            let ticketTypeLabel = '';
+            let headerTextColor = '';
+            let supportTextColor = '';
+            let clsuLogoColor = ''; // Placeholder for CLSU logo color if it were an SVG
+            let ticketTypeBoxBg = ''; // Background for the ticket type label box
+            let ticketTypeBoxText = ''; // Text color for the ticket type label box
+            let quoteBoxBgOpacity = ''; // Opacity for the quote box background
+            let quoteBoxTextColor = ''; // Text color for the quote box
+            let headerBorderColor = ''; // Color for the header border
+            let inputBgColor = 'bg-white'; // Default input background
+            let inputBorderColor = 'border-gray-300'; // Default input border
+            let ticketBorderClass = ''; // New variable for ticket border
+            let quoteBoxBorderClass = ''; // New variable for quote box border
+
+            switch (type) {
+                case 'ga':
+                    themeClass = 'general-admission-theme';
+                    ticketTypeLabel = 'GENERAL ADMISSION PASS';
+                    headerTextColor = 'text-white';
+                    supportTextColor = 'text-white';
+                    clsuLogoColor = 'ff5e62'; /* Red/Orange for CLSU logo in GA theme */
+                    ticketTypeBoxBg = 'general-admission-theme'; // Use the gradient class
+                    ticketTypeBoxText = 'text-white';
+                    quoteBoxBgOpacity = 'bg-white bg-opacity-30';
+                    quoteBoxTextColor = 'text-white';
+                    headerBorderColor = 'border-white border-opacity-30';
+                    inputBgColor = 'bg-white bg-opacity-80'; // Slightly transparent white
+                    inputBorderColor = 'border-white border-opacity-50';
+                    ticketBorderClass = ''; // No specific border for GA
+                    quoteBoxBorderClass = ''; // No specific border for GA quote box
+                    break;
+                case 'vip':
+                    themeClass = 'vip-theme';
+                    ticketTypeLabel = '₰ VIP PASS ₰';
+                    headerTextColor = 'text-gray-800';
+                    supportTextColor = 'text-gray-700';
+                    clsuLogoColor = 'ffb300'; /* Golden for CLSU logo in VIP theme */
+                    ticketTypeBoxBg = 'vip-theme'; // Use the gradient class
+                    ticketTypeBoxText = 'text-gray-800'; // Keep dark text for VIP gradient
+                    quoteBoxBgOpacity = 'bg-white bg-opacity-30';
+                    quoteBoxTextColor = 'text-gray-800';
+                    headerBorderColor = 'border-gray-300';
+                    inputBgColor = 'bg-white bg-opacity-80';
+                    inputBorderColor = 'border-gray-300';
+                    ticketBorderClass = 'border-4 border-yellow-600'; // Stronger gold border for VIP
+                    quoteBoxBorderClass = 'border-2 border-yellow-600'; // Golden border for VIP quote box
+                    break;
+                case 'relatives':
+                    themeClass = 'relatives-theme';
+                    ticketTypeLabel = 'FAMILY & FRIENDS PASS';
+                    headerTextColor = 'text-white';
+                    supportTextColor = 'text-white';
+                    clsuLogoColor = '2e7d32'; /* Dark Green for CLSU logo in Relatives theme */
+                    ticketTypeBoxBg = 'relatives-theme'; // Use the gradient class
+                    ticketTypeBoxText = 'text-white';
+                    quoteBoxBgOpacity = 'bg-white bg-opacity-30';
+                    quoteBoxTextColor = 'text-white';
+                    headerBorderColor = 'border-white border-opacity-30';
+                    inputBgColor = 'bg-white bg-opacity-80';
+                    inputBorderColor = 'border-white border-opacity-50';
+                    ticketBorderClass = 'border-4 border-emerald-600'; // Deeper emerald border for Relatives
+                    quoteBoxBorderClass = ''; // No specific border for Relatives quote box
+                    break;
+            }
+
+            const ticketHTML = `
+                <!-- Ticket Card Container (Front Side) -->
+                <div id="ticket-front-${type}" class="
+                    ticket-card
+                    ${themeClass}
+                    ${ticketBorderClass} /* Added border class here */
+                    p-6
+                    flex flex-col
+                ">
+                    <!-- Header Section with three logos -->
+                    <div class="flex items-center justify-around mb-4 border-b ${headerBorderColor} pb-2">
+                        <!-- CAO Logo Left -->
+                        <img src="CAOLOGO.png" alt="CAO Logo" class="h-7 w-auto object-contain">
+
+                        <!-- Maestro Logo Middle -->
+                        <img src="LOGO REVAMPED.png" alt="Maestro Logo" class="h-10 w-auto object-contain">
+
+                        <!-- CLSU Logo Right -->
+                        <img src="Seal Monogram_white.png" alt="CLSU Logo" class="h-12 w-12 object-contain">
+                    </div>
+
+                    <!-- "Intayon" Logo Container -->
+                    <div class="text-center mt-4 mb-6">
+                        <img src="g173.png" alt="Intayon Logo" class="mx-auto h-24 w-auto object-contain">
+                    </div>
+
+                    <!-- Concert Title & Event Details -->
+                    <div class="text-center mb-8 px-2">
+                        <h2 class="text-2xl font-bold mb-2 ${headerTextColor}">
+                            CLSU Maestro Singers<br>SEND-OFF CONCERT
+                        </h2>
+                        <p class="text-lg font-medium mb-1 ${supportTextColor}">
+                            July 18, 2025 | 6:00 PM
+                        </p>
+                        <p class="text-base font-medium ${supportTextColor}">
+                            Reimers Hall, Central Luzon State University
+                        </p>
+                    </div>
+
+                    <!-- Ticket Type / Admission -->
+                    <div class="
+                        ${ticketTypeBoxBg} ${ticketTypeBoxText}
+                        font-extrabold text-center py-4 px-6 mx-4 rounded-xl mb-8 shadow-lg
+                        flex items-center justify-center
+                    ">
+                        <span class="text-xl uppercase tracking-widest">${ticketTypeLabel}</span>
+                    </div>
+
+                    <!-- Attendee Details Section -->
+                    <div class="flex flex-col items-center justify-center mb-8 px-4">
+                        <div class="w-full space-y-4 text-center">
+                            <div>
+                                <label for="renderedAttendeeName" class="block text-sm font-semibold ${supportTextColor} mb-1">ATTENDEE NAME:</label>
+                                <input
+                                    type="text"
+                                    id="renderedAttendeeName"
+                                    value="${attendeeName}"
+                                    readonly
+                                    class="w-full px-4 py-3 text-2xl text-gray-900 ${inputBgColor} text-center rounded-lg border ${inputBorderColor} font-extrabold cursor-default"
+                                />
+                            </div>
+                            <div>
+                                <label for="renderedSeatNumber" class="block text-sm font-semibold ${supportTextColor} mb-1">SEAT NUMBER:</label>
+                                <input
+                                    type="text"
+                                    id="renderedSeatNumber"
+                                    value="${seatNumber}"
+                                    readonly
+                                    class="w-full px-4 py-3 text-2xl text-gray-900 ${inputBgColor} text-center rounded-lg border ${inputBorderColor} font-extrabold cursor-default"
+                                />
+                            </div>
+                        </div>
+                        <p class="text-sm ${supportTextColor} text-center mt-6 italic">
+                            Present this pass upon entry for verification.
+                        </p>
+                    </div>
+
+                    <!-- "Intayon" Theme Quote -->
+                    <div class="
+                        ${quoteBoxBgOpacity} p-3 mx-4 rounded-lg shadow-inner mb-6 ${quoteBoxTextColor}
+                        text-center text-xs opacity-80
+                        flex items-center justify-center flex-col /* Added flex-col for multi-line text vertical centering */
+                        ${quoteBoxBorderClass} /* Added border class here */
+                    ">
+                        <p class="mb-1">
+                            "Intayon. Let’s go with music, with heart, and with hope."
+                        </p>
+                        <p>
+                            This concert is a musical voyage where every song is a step, every harmony a companion, and every voice a reminder that we do not journey alone.
+                        </p>
+                    </div>
+
+                    <!-- Important Notes & Footer -->
+                    <div class="text-center text-xs ${supportTextColor} mt-auto pt-4 border-t border-white border-opacity-30 opacity-70">
+                        <p class="font-bold mb-1">ADMISSION IS FREE. SEATS ARE LIMITED.</p>
+                        <p class="mt-2">
+                            A Project of the CLSU Maestro Singers. All rights reserved.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Save Front as Image Button -->
+                <div class="mt-4 text-center no-print">
+                    <button
+                        onclick="saveTicketAsImage('ticket-front-${type}', 'CLSU_Maestro_${type.toUpperCase()}_${attendeeName.toUpperCase()}.png')"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+                    >
+                        <i class="fas fa-download mr-2"></i> Save as Image
+                    </button>
+                </div>
+            `;
+
+            ticketDisplayArea.innerHTML = ticketHTML;
+        }
+
+        function saveTicketAsImage(elementId, filename) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                console.error(`Element with ID '${elementId}' not found.`);
+                return;
+            }
+
+            // Temporarily hide the print button and other controls for screenshot
+            const noPrintElements = document.querySelectorAll('.no-print');
+            noPrintElements.forEach(el => el.style.display = 'none');
+
+            html2canvas(element, {
+                scale: 10, // Increase scale for higher resolution image
+                useCORS: true, // Required if you have external images/fonts
+                logging: false // Disable logging for cleaner console
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Restore hidden elements
+                noPrintElements.forEach(el => el.style.display = '');
+
+                // Show the thank you modal after download
+                showThankYouModal();
+
+            }).catch(error => {
+                console.error('Error generating image:', error);
+                // Restore hidden elements in case of error
+                noPrintElements.forEach(el => el.style.display = '');
+            });
+        }
+
+        // Custom Alert Modal (instead of window.alert)
+        function showCustomAlert(message) {
+            const alertModal = document.createElement('div');
+            alertModal.id = 'customAlertModal';
+            alertModal.className = 'fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50';
+            alertModal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center border border-blue-300">
+                    <h4 class="text-xl font-bold text-gray-800 mb-4">Notification</h4>
+                    <p class="text-gray-700 mb-6">${message}</p>
+                    <button onclick="document.getElementById('customAlertModal').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                        OK
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(alertModal);
+        }
+
+        // Thank You Modal functions
+        const thankYouModal = document.getElementById('thankYouModal');
+        const thankYouModalContent = document.getElementById('thankYouModalContent');
+
+        function showThankYouModal() {
+            thankYouModal.classList.remove('hidden');
+            setTimeout(() => {
+                thankYouModalContent.classList.remove('scale-95', 'opacity-0');
+                thankYouModalContent.classList.add('scale-100', 'opacity-100');
+                // Trigger confetti animation
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }, 10);
+        }
+
+        function closeThankYouModal() {
+            thankYouModalContent.classList.remove('scale-100', 'opacity-100');
+            thankYouModalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                thankYouModal.classList.add('hidden');
+            }, 300);
+        }
+    </script>
+
+</body>
+</html>
